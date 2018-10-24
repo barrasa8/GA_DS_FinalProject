@@ -1,16 +1,19 @@
 import pandas as pd
+import numpy as np
 import geoip2.database
 import os
+import re
 
 class log:
 
     reader = geoip2.database.Reader('../data/GeoLite2-City_20181009/GeoLite2-City.mmdb')
+    log_df =pd.DataFrame()
     
     def ___init__(self):
         print("IN INIT METHOD")
         
     def readLog(self,file):
-        log_df = pd.read_csv(file
+        self.log_df = pd.read_csv(file
             #,skiprows=[0,1,2,3]
             , comment='#'
             , sep=' ' 
@@ -28,7 +31,7 @@ class log:
                     ,'sc-status'
                     ,'sc-substatus'
                    ,'time-taken(ms)'])
-        return log_df
+        return self.log_df
     
     def getDevice (self,UserAgentResponse):
         device ='Other' 
@@ -63,15 +66,15 @@ class log:
         return section
 
     def deriveClientDevice(self,iis_log_df):
-        iis_log_df['client-device']  =  iis_log_df['cs(User-Agent)'].apply(lambda x: getDevice(str(x)))
+        iis_log_df['client-device']  =  iis_log_df['cs(User-Agent)'].apply(lambda x: self.getDevice(str(x)))
         return iis_log_df
 
     def deriveClientBrowser(self,iis_log_df):
-        iis_log_df['client-browser'] =  iis_log_df['cs(User-Agent)'].apply(lambda x: getBrowser(str(x)))
+        iis_log_df['client-browser'] =  iis_log_df['cs(User-Agent)'].apply(lambda x: self.getBrowser(str(x)))
         return iis_log_df
 
     def deriveClientWebPage(self,iis_log_df):
-        iis_log_df['client-webPage'] = iis_log_df['cs(Referer)'].apply(lambda x: GetWebPageSection(x) if type(x) != float else np.nan)
+        iis_log_df['client-webPage'] = iis_log_df['cs(Referer)'].apply(lambda x: self.GetWebPageSection(x) if type(x) != float else np.nan)
         return iis_log_df
 
     def deriveClientCity(self,iis_log_df):
@@ -110,19 +113,27 @@ class log:
         try:    
             for file in listOfFiles:
                 print (file)
-                log_df = self.readLog(file)
-                #log_df = self.deriveClientCity(log_df)
-                #log_df = self.deriveClientCountry(log_df)
-                #log_df = self.deriveClientDevice(log_df)
-                #log_df = self.deriveClientBrowser(log_df)
-                #log_df = self.deriveClientWebPage(log_df)
-                #log_df = self.deriveClientCity(log_df)
-                #log_df = self.deriveClientCountry(log_df)
-                #df = pd.concat([df,log_df])
+                self.log_df = self.readLog(file)
+                self.log_df = self.deriveClientDevice(self.log_df)
+                self.log_df = self.deriveClientBrowser(self.log_df)
+                self.log_df = self.deriveClientWebPage(self.log_df)
+                self.log_df = self.deriveClientCity(self.log_df)
+                self.log_df = self.deriveClientCountry(self.log_df)
+                df = pd.concat([df,self.log_df])
                 os.rename(file,'../data/success/' + file[file.find('u'):])
-        except Exception:
+        except Exception as inst:
+            
+            print(type(inst))    # the exception instance
+            print(inst.args)     # arguments stored in .args
+            print(inst)          # __str__ allows args to be printed directly,
+                                 # but may be overridden in exception subclasses
+            x, y = inst.args     # unpack args
+            print('x =', x)
+            print('y =', y)
+
             os.rename(file,'../data/error/' + file[file.find('u'):])
             print('Moving file '+ file + ' to ../data/error/')
+            print(sys.exc_info()[0])
 
         finally:        
             self.reader.close()
