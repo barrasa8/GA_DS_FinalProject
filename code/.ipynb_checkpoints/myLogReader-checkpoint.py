@@ -14,23 +14,25 @@ class log:
         
     def readLog(self,file):
         self.log_df = pd.read_csv(file
-            #,skiprows=[0,1,2,3]
-            , comment='#'
-            , sep=' ' 
-            , usecols=[0,1, 2, 5, 6, 7, 8, 9, 10,11,12,14]
-            , na_values='-'
-            , names=['date'
-                    ,'time'
-                    ,'server-ip'
-                    ,'cs-uri-query'
-                    ,'server-port'
-                    ,'cs-username'
-                    ,'client-ip'
-                    ,'cs(User-Agent)'
-                    ,'cs(Referer)'
-                    ,'sc-status'
-                    ,'sc-substatus'
-                   ,'time-taken(ms)'])
+                                #,skiprows=[0,1,2,3]
+                                , comment='#'
+                                , sep=' ' 
+                                , usecols=[0,1, 2, 5, 6, 7, 8, 9, 10,11,12,14]
+                                , na_values='-'
+                                , names=['date'
+                                ,'time'
+                                ,'server-ip'
+                                ,'cs-uri-query'
+                                ,'server-port'
+                                ,'cs-username'
+                                ,'client-ip'
+                                ,'cs(User-Agent)'
+                                ,'cs(Referer)'
+                                ,'sc-status'
+                                ,'sc-substatus'
+                                ,'time-taken(ms)']
+                                ,encoding = "ISO-8859-1"
+                                 )
         return self.log_df
     
     def getDevice (self,UserAgentResponse):
@@ -105,9 +107,6 @@ class log:
     
     def readLogs(self,logsPath):
         df = pd.DataFrame()
-        #instantiate log reader
-        #reader = geoip2.database.Reader(geoLiteIPDBPath)
-
         listOfFiles = self.getListOfFiles(logsPath)
 
         try:    
