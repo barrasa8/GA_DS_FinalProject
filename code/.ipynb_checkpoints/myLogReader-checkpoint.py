@@ -3,18 +3,22 @@ import numpy as np
 import geoip2.database
 import os
 import re
+import datetime as dt
 
 class log:
-
-    reader = geoip2.database.Reader('../data/GeoLite2-City_20181009/GeoLite2-City.mmdb')
     log_df =pd.DataFrame()
     
     def ___init__(self):
         print("IN INIT METHOD")
+    
+    def openReader(self,geoLiteIPDBPath):
+        self.reader = geoip2.database.Reader(geoLiteIPDBPath)
         
+    def closeReader(self):
+        self.reader.close()
+    
     def readLog(self,file):
         self.log_df = pd.read_csv(file
-                                #,skiprows=[0,1,2,3]
                                 , comment='#'
                                 , sep=' ' 
                                 , usecols=[0,1, 2, 5, 6, 7, 8, 9, 10,11,12,14]
@@ -88,6 +92,17 @@ class log:
         iis_log_df['client-country'] =  iis_log_df['client-ip'].apply(lambda x: self.reader.city(ip_address=x).country.name if self.reader.city(ip_address=x).country.name != None else np.nan)
         return iis_log_df
     
+    def deriveDateWeekday(self,iis_log_df):
+        iis_log_df['date-IsWeekday']   = iis_log_df['date'].apply(lambda x: 1 if np.int8(str(dt.datetime.strptime(x,'%Y-%m-%d').weekday())) < 5 else 0)
+        return iis_log_df
+        
+    def deriveDateCalendarWeek(self,iis_log_df):
+        iis_log_df['date-calendar-week']   = iis_log_df['date'].apply(lambda x: np.int8(str(dt.datetime.strptime(x,'%Y-%m-%d').isocalendar()[1])))
+        return iis_log_df
+    
+    def deriveDateYear(self,iis_log_df):
+        iis_log_df['date-year']   = iis_log_df['date'].apply(lambda x: dt.datetime.strptime(x,'%Y-%m-%d').year)
+        return iis_log_df
     
     def getListOfFiles(self,dirName):
         # names in the given directory 
@@ -105,21 +120,27 @@ class log:
         return allFiles
 
     
-    def readLogs(self,logsPath):
+    def readLogs(self,logsPath,numberOfFiles):
         df = pd.DataFrame()
         listOfFiles = self.getListOfFiles(logsPath)
-
+        iterator = 0 
+        
         try:    
             for file in listOfFiles:
-                print (file)
-                self.log_df = self.readLog(file)
-                self.log_df = self.deriveClientDevice(self.log_df)
-                self.log_df = self.deriveClientBrowser(self.log_df)
-                self.log_df = self.deriveClientWebPage(self.log_df)
-                self.log_df = self.deriveClientCity(self.log_df)
-                self.log_df = self.deriveClientCountry(self.log_df)
-                df = pd.concat([df,self.log_df])
-                os.rename(file,'../data/success/' + file[file.find('u'):])
+                iterator = iterator + 1
+                if (iterator <= numberOfFiles):
+                    print (file)
+                    self.log_df = self.readLog(file)
+                    self.log_df = self.deriveClientDevice(self.log_df)
+                    self.log_df = self.deriveClientBrowser(self.log_df)
+                    self.log_df = self.deriveClientWebPage(self.log_df)
+                    self.log_df = self.deriveClientCity(self.log_df)
+                    self.log_df = self.deriveClientCountry(self.log_df)
+                    self.log_df = self.deriveDateWeekday(self.log_df)
+                    self.log_df = self.deriveDateCalendarWeek(self.log_df)
+                    self.log_df = self.deriveDateYear(self.log_df)
+                    df = pd.concat([df,self.log_df])
+                    os.rename(file,'../data/success/' + file[file.find('u'):])
         except Exception as inst:
             
             print(type(inst))    # the exception instance
@@ -135,5 +156,4 @@ class log:
             print(sys.exc_info()[0])
 
         finally:        
-            self.reader.close()
             return df
