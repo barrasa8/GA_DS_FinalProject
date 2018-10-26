@@ -139,6 +139,8 @@ class log:
                     self.log_df = self.deriveDateWeekday(self.log_df)
                     self.log_df = self.deriveDateCalendarWeek(self.log_df)
                     self.log_df = self.deriveDateYear(self.log_df)
+                    self.log_df = self.log_df.iloc[:,[0,5,6,11,12,13,14,15,16,17,18,19]]
+                    self.log_df['cs-username'].fillna('Unknown',inplace=True)
                     df = pd.concat([df,self.log_df])
                     os.rename(file,'../data/success/' + file[file.find('u'):])
         except Exception as inst:
