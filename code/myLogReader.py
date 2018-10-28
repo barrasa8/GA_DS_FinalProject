@@ -104,6 +104,46 @@ class log:
         iis_log_df['date-year']   = iis_log_df['date'].apply(lambda x: dt.datetime.strptime(x,'%Y-%m-%d').year)
         return iis_log_df
     
+    def groupbyCalendarYearWeek_ClientDevice(iis_log_df):
+        (iis_log_df.groupby(by=['calendar-year-week','client-device'])
+                    .agg({'client-device': pd.Series.count})  
+                    .rename(columns = {'client-device':'client-device-count'})      
+                    .reset_index(level=1)
+                    .pivot(columns='client-device',values='client-device-count')
+                    .rename(columns = {'Desktop':'Desktop-count'
+                                      ,'Mobile':'Mobile-count'}))
+        return iis_log_df
+    
+
+    def groupbyCalendarYearWeek_ClientBrowser(iis_log_df):
+        (iis_log_df.groupby(by=['calendar-year-week','client-browser'])
+            .agg({'client-browser': pd.Series.count})
+            .rename(columns = {'client-browser':'client-browser-count'})      
+            .reset_index(level=1)
+            .pivot(columns='client-browser',values='client-browser-count')
+            .rename(columns = {'Chrome':'Chrome-count'
+                              ,'Firefox':'Firefox-count'
+                              ,'Other':'Other-count'
+                              ,'Safari':'Safari-count'}))
+        return iis_log_df
+    def groupbyCalendarYearWeek_TotalConnections_TimeTaken(iis_log_df):
+        (iis_log_df.groupby(by=['calendar-year-week'])
+            .agg({'client-ip': pd.Series.count,'time-taken(ms)' : pd.Series.sum})
+            .rename(columns = {'client-ip':'client-ip-unique-count','time-taken(ms)' :'time-taken(ms)-sum'}))
+        return iis_log_df
+    def groupbyCalendarYearWeek_CsUsername(iis_log_df):
+        (iis_log_df.groupby(by=['calendar-year-week'])
+            .agg({'cs-username': pd.Series.nunique})
+            .rename(columns = {'cs-username':'cs-username-unique-count'}))
+        return iis_log_df
+    def groupbyCalendarYearWeek_ClientIp(iis_log_df):
+        (iis_log_df.groupby(by=['calendar-year-week'])
+            .agg({'client-ip': pd.Series.nunique})
+            .rename(columns = {'client-ip':'client-ip-unique-count'}))
+        return iis_log_df
+    
+    
+    
     def getListOfFiles(self,dirName):
         # names in the given directory 
         listOfFile = os.listdir(dirName)
@@ -141,6 +181,11 @@ class log:
                     self.log_df = self.deriveDateYear(self.log_df)
                     self.log_df = self.log_df.iloc[:,[0,5,6,11,12,13,14,15,16,17,18,19]]
                     self.log_df['cs-username'].fillna('Unknown',inplace=True)
+                    self.log_df['client-webPage'].fillna('Unknown',inplace=True)
+                    self.log_df['client-city'].fillna('Unknown',inplace=True)
+                    self.log_df['calendar-year-week']= (self.log_df[['date-year','date-calendar-week']]
+                                                        .apply(lambda x: '{}{}{}'.format(x[0],'-',x[1])
+                                                        ,axis=1))
                     df = pd.concat([df,self.log_df])
                     os.rename(file,'../data/success/' + file[file.find('u'):])
         except Exception as inst:
