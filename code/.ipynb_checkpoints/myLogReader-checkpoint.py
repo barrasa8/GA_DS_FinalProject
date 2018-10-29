@@ -71,6 +71,24 @@ class log:
             return section.group()
         return section
 
+    def getClientCity(self,ip_address):
+        try:
+            response = None
+            response = self.reader.city(ip_address).city.name 
+        except:
+            pass
+        finally:
+            return response
+    
+    def getClientCountry(self,ip_address):
+        try:
+            response = None
+            response = self.reader.city(ip_address).country.name
+        except:
+            pass
+        finally:
+            return response
+        
     def deriveClientDevice(self,iis_log_df):
         iis_log_df['client-device']  =  iis_log_df['cs(User-Agent)'].apply(lambda x: self.getDevice(str(x)))
         return iis_log_df
@@ -84,12 +102,11 @@ class log:
         return iis_log_df
 
     def deriveClientCity(self,iis_log_df):
-        #print(iis_log_df)
-        iis_log_df['client-city'] =  iis_log_df['client-ip'].apply(lambda x: self.reader.city(ip_address=x).city.name if self.reader.city(ip_address=x).city.name != None else np.nan)
+        iis_log_df['client-city'] =  iis_log_df['client-ip'].apply(lambda x: self.getClientCity(ip_address=x) if self.getClientCity(ip_address=x) != None else np.nan)
         return iis_log_df
 
     def deriveClientCountry(self,iis_log_df):    
-        iis_log_df['client-country'] =  iis_log_df['client-ip'].apply(lambda x: self.reader.city(ip_address=x).country.name if self.reader.city(ip_address=x).country.name != None else np.nan)
+        iis_log_df['client-country'] =  iis_log_df['client-ip'].apply(lambda x: self.getClientCountry(ip_address=x) if self.getClientCountry(ip_address=x) != None else np.nan)
         return iis_log_df
     
     def deriveDateWeekday(self,iis_log_df):
@@ -105,7 +122,7 @@ class log:
         return iis_log_df
     
     def groupbyCalendarYearWeek_ClientDevice(self,iis_log_df):
-        (iis_log_df.groupby(by=['calendar-year-week','client-device'])
+        iis_log_df=(iis_log_df.groupby(by=['calendar-year-week','client-device'])
                     .agg({'client-device': pd.Series.count})  
                     .rename(columns = {'client-device':'client-device-count'})      
                     .reset_index(level=1)
@@ -116,7 +133,7 @@ class log:
     
 
     def groupbyCalendarYearWeek_ClientBrowser(self,iis_log_df):
-        (iis_log_df.groupby(by=['calendar-year-week','client-browser'])
+        iis_log_df=(iis_log_df.groupby(by=['calendar-year-week','client-browser'])
             .agg({'client-browser': pd.Series.count})
             .rename(columns = {'client-browser':'client-browser-count'})      
             .reset_index(level=1)
@@ -127,22 +144,28 @@ class log:
                               ,'Safari':'Safari-count'}))
         return iis_log_df
     def groupbyCalendarYearWeek_TotalConnections_TimeTaken(self,iis_log_df):
-        (iis_log_df.groupby(by=['calendar-year-week'])
+        iis_log_df=(iis_log_df.groupby(by=['calendar-year-week'])
             .agg({'client-ip': pd.Series.count,'time-taken(ms)' : pd.Series.sum})
             .rename(columns = {'client-ip':'client-connections-count','time-taken(ms)' :'time-taken(ms)-sum'}))
         return iis_log_df
     def groupbyCalendarYearWeek_CsUsername(self,iis_log_df):
-        (iis_log_df.groupby(by=['calendar-year-week'])
+        iis_log_df=(iis_log_df.groupby(by=['calendar-year-week'])
             .agg({'cs-username': pd.Series.nunique})
             .rename(columns = {'cs-username':'cs-username-unique-count'}))
         return iis_log_df
     def groupbyCalendarYearWeek_ClientIp(self,iis_log_df):
-        (iis_log_df.groupby(by=['calendar-year-week'])
+        iis_log_df=(iis_log_df.groupby(by=['calendar-year-week'])
             .agg({'client-ip': pd.Series.nunique})
             .rename(columns = {'client-ip':'client-ip-unique-count'}))
         return iis_log_df
     
     def aggregateData(self,iis_log_df):
+        
+        df_ip = self.groupbyCalendarYearWeek_ClientIp(iis_log_df)
+        df_username = self.groupbyCalendarYearWeek_CsUsername(iis_log_df)
+        df_totalConnections = self.groupbyCalendarYearWeek_TotalConnections_TimeTaken(iis_log_df)
+        df_browser = self.groupbyCalendarYearWeek_ClientBrowser(iis_log_df)
+        df_device = self.groupbyCalendarYearWeek_ClientDevice(iis_log_df)
         
         df = (pd.concat([self.groupbyCalendarYearWeek_ClientIp(iis_log_df)
                          ,self.groupbyCalendarYearWeek_CsUsername(iis_log_df)
@@ -172,8 +195,9 @@ class log:
         return allFiles
 
     
-    def readLogs(self,logsPath,numberOfFiles):
+    def readLogs(self,logsPath,numberOfFiles=1000):
         df = pd.DataFrame()
+        df_aggregate = pd.DataFrame()
         listOfFiles = self.getListOfFiles(logsPath)
         iterator = 0 
         
@@ -198,8 +222,13 @@ class log:
                     self.log_df['calendar-year-week']= (self.log_df[['date-year','date-calendar-week']]
                                                         .apply(lambda x: '{}{}{}'.format(x[0],'-',x[1])
                                                         ,axis=1))
-                    self.log_df =self.aggregateData(self.log_df)
-                    df = pd.concat([df,self.log_df])
+                    if iterator%7 == 0:
+                        df =self.aggregateData(df)
+                        df_aggregate = pd.concat([df_aggregate,df])
+                        del df
+                        df = pd.DataFrame()
+                    else:
+                        df = pd.concat([df,self.log_df])
                     os.rename(file,'../data/success/' + file[file.find('u'):])
         except Exception as inst:
             
@@ -216,4 +245,4 @@ class log:
             print(sys.exc_info()[0])
 
         finally:        
-            return df
+            return df_aggregate
