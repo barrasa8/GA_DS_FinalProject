@@ -179,6 +179,65 @@ class log:
         
         return df
     
+    def groupbyDate_ClientDevice(self,iis_log_df):
+        iis_log_df=(iis_log_df.groupby(by=['date','client-device'])
+                    .agg({'client-device': pd.Series.count})  
+                    .rename(columns = {'client-device':'client-device-count'})      
+                    .reset_index(level=1)
+                    .pivot(columns='client-device',values='client-device-count')
+                    .rename(columns = {'Desktop':'Desktop-count'
+                                      ,'Mobile':'Mobile-count'}))
+        return iis_log_df
+    
+
+    def groupbyDate_ClientBrowser(self,iis_log_df):
+        iis_log_df=(iis_log_df.groupby(by=['date','client-browser'])
+            .agg({'client-browser': pd.Series.count})
+            .rename(columns = {'client-browser':'client-browser-count'})      
+            .reset_index(level=1)
+            .pivot(columns='client-browser',values='client-browser-count')
+            .rename(columns = {'Chrome':'Chrome-count'
+                              ,'Firefox':'Firefox-count'
+                              ,'Other':'Other-count'
+                              ,'Safari':'Safari-count'}))
+        return iis_log_df
+    def groupbyDate_TotalConnections_TimeTaken(self,iis_log_df):
+        iis_log_df=(iis_log_df.groupby(by=['date'])
+            .agg({'client-ip': pd.Series.count,'time-taken(ms)' : pd.Series.sum})
+            .rename(columns = {'client-ip':'client-connections-count','time-taken(ms)' :'time-taken(ms)-sum'}))
+        return iis_log_df
+    def groupbyDate_CsUsername(self,iis_log_df):
+        iis_log_df=(iis_log_df.groupby(by=['date'])
+            .agg({'cs-username': pd.Series.nunique})
+            .rename(columns = {'cs-username':'cs-username-unique-count'}))
+        return iis_log_df
+    def groupbyDate_ClientIp(self,iis_log_df):
+        iis_log_df=(iis_log_df.groupby(by=['date'])
+            .agg({'client-ip': pd.Series.nunique})
+            .rename(columns = {'client-ip':'client-ip-unique-count'}))
+        return iis_log_df
+    
+
+    def aggregateDataByDate(self,iis_log_df):
+
+        df_ip = self.groupbyDate_ClientIp(iis_log_df)
+        df_username = self.groupbyDate_CsUsername(iis_log_df)
+        df_totalConnections = self.groupbyDate_TotalConnections_TimeTaken(iis_log_df)
+        df_browser = self.groupbyDate_ClientBrowser(iis_log_df)
+        df_device = self.groupbyDate_ClientDevice(iis_log_df)
+
+        df = (pd.concat([self.groupbyDate_ClientIp(iis_log_df)
+                         ,self.groupbyDate_CsUsername(iis_log_df)
+                         ,self.groupbyDate_TotalConnections_TimeTaken(iis_log_df)
+                         ,self.groupbyDate_ClientBrowser(iis_log_df)
+                         ,self.groupbyDate_ClientDevice(iis_log_df)
+                        ]
+                        ,axis=1
+                        )
+             )
+
+        return df
+    
     def getListOfFiles(self,dirName):
         # names in the given directory 
         listOfFile = os.listdir(dirName)
@@ -222,13 +281,15 @@ class log:
                     self.log_df['calendar-year-week']= (self.log_df[['date-year','date-calendar-week']]
                                                         .apply(lambda x: '{}{}{}'.format(x[0],'-',x[1])
                                                         ,axis=1))
-                    if iterator%7 == 0:
-                        df =self.aggregateData(df)
+                    df = pd.concat([df,self.log_df])
+                    if iterator%numberOfFiles == 0:
+                        #df =self.aggregateData(df)
+                        df=self.aggregateDataByDate(df)
                         df_aggregate = pd.concat([df_aggregate,df])
                         del df
                         df = pd.DataFrame()
-                    else:
-                        df = pd.concat([df,self.log_df])
+                    #else:
+                        #df = pd.concat([df,self.log_df])
                     os.rename(file,'../data/success/' + file[file.find('u'):])
         except Exception as inst:
             
