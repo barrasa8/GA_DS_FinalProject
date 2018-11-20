@@ -16132,6 +16132,7 @@ dtype: float64</pre>
 <td>Daily</td>
 <td>ARIMA(1,0,4) LOG</td>
 <td>MAE: 21.680</td>
+<td></td>
 </tr>
 <tr>
 <td>Daily</td>
@@ -16169,12 +16170,25 @@ dtype: float64</pre>
 <h4 id="Summary:">Summary:<a class="anchor-link" href="#Summary:">&#182;</a></h4><ul>
 <li>geoip2.database --&gt; great library for enhancing data related to IP, with Geo location</li>
 <li>Aggregating data to the <strong>day level</strong> instead of weekly, gives <strong>better improvement</strong> in the prediction, related to the baseline</li>
-<li>ARIMA(1,0,4) is the better model</li>
+<li><strong>Holt-Winter - 3 observations in test df</strong> is the better model</li>
 <li>Even though the target histogram seams right skew, taking the LOG of the target, not always translates to a better model.</li>
 </ul>
 
 </div>
 </div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span> 
+</pre></div>
+
+    </div>
+</div>
+</div>
+
 </div></section></section>
 </div>
 </div>
